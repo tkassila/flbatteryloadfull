@@ -38,6 +38,15 @@ class AppStrings {
   final String instructionsAndroid13Title;
   final String instructionsAndroid13Body;
   final String beforeUseButton;
+  final String serviceStatusActive;
+  final String serviceStatusStopped;
+  final String serviceRestartButton;
+  final String serviceChecking;
+  final String batteryOptWarningTitle;
+  final String batteryOptWarningSubtitle;
+  final String batteryOptButton;
+  final String batteryOptGrantedTitle;
+  final String batteryOptGrantedSubtitle;
 
   const AppStrings({
     required this.appTitle,
@@ -77,6 +86,15 @@ class AppStrings {
     required this.instructionsAndroid13Title,
     required this.instructionsAndroid13Body,
     required this.beforeUseButton,
+    required this.serviceStatusActive,
+    required this.serviceStatusStopped,
+    required this.serviceRestartButton,
+    required this.serviceChecking,
+    required this.batteryOptWarningTitle,
+    required this.batteryOptWarningSubtitle,
+    required this.batteryOptButton,
+    required this.batteryOptGrantedTitle,
+    required this.batteryOptGrantedSubtitle,
   });
 
   // English (Default)
@@ -110,7 +128,7 @@ class AppStrings {
     instructionsTitle: 'Device manufacturer specific settings (Important!):',
     instructionsIntro: 'Different Android manufacturers have their own aggressive battery optimizers that may terminate background services when the phone is in sleep mode for a prolonged time. Check these depending on your phone model:',
     instructionsSamsungTitle: 'Samsung (One UI):',
-    instructionsSamsungBody: 'Settings -> Battery -> Background usage limits -> Never sleeping apps -> Add Battery Guard (or fsavenotifications).',
+    instructionsSamsungBody: 'Settings -> Battery -> Background usage limits -> Never sleeping apps -> Add Battery Guard.',
     instructionsXiaomiTitle: 'Xiaomi / Redmi / POCO (MIUI / HyperOS):',
     instructionsXiaomiBody: 'App info -> Autostart -> Turn ON.\nApp info -> Battery saver -> Select No restrictions.',
     instructionsOnePlusTitle: 'OnePlus / Oppo / Realme (OxygenOS / ColorOS):',
@@ -118,6 +136,15 @@ class AppStrings {
     instructionsAndroid13Title: 'Android 13 and 14+ (all brands):',
     instructionsAndroid13Body: 'If app is installed from an APK file: App info -> three dots in top-right corner (⋮) -> Allow restricted settings, before enabling notification permissions.',
     beforeUseButton: 'Before use',
+    serviceStatusActive: 'Background monitoring active and running',
+    serviceStatusStopped: 'Background monitoring is not running',
+    serviceRestartButton: 'Restart Monitoring',
+    serviceChecking: 'Checking status...',
+    batteryOptWarningTitle: 'Battery optimization enabled (restricted)',
+    batteryOptWarningSubtitle: 'Android battery optimizer may stop monitoring during sleep. Disable it for reliable alarms.',
+    batteryOptButton: 'Allow Unrestricted Background',
+    batteryOptGrantedTitle: 'Unrestricted background allowed',
+    batteryOptGrantedSubtitle: 'Battery optimizations disabled. Background service will not be suspended.',
   );
 
   // Finnish
@@ -151,7 +178,7 @@ class AppStrings {
     instructionsTitle: 'Laitevalmistajakohtaiset asetukset puhelimessa (Tärkeää!):',
     instructionsIntro: 'Eri Android-valmistajilla on omat "tehovalvojat", jotka saattavat sammuttaa taustapalveluita, jos puhelin on pitkään lepotilassa. Tarkista nämä puhelinmallistasi riippuen:',
     instructionsSamsungTitle: 'Samsung (One UI):',
-    instructionsSamsungBody: 'Asetukset -> Akku -> Taustakäytön rajat -> Älä koskaan aseta lepotilaan -> Lisää Akkuvahti (tai fsavenotifications).',
+    instructionsSamsungBody: 'Asetukset -> Akku -> Taustakäytön rajat -> Älä koskaan aseta lepotilaan -> Lisää Akkuvahti.',
     instructionsXiaomiTitle: 'Xiaomi / Redmi / POCO (MIUI / HyperOS):',
     instructionsXiaomiBody: 'Sovelluksen tiedot -> Automaattikäynnistys (Autostart) -> Laita päälle.\nSovelluksen tiedot -> Akunsäästäjä -> Valitse Ei rajoituksia.',
     instructionsOnePlusTitle: 'OnePlus / Oppo / Realme (OxygenOS / ColorOS):',
@@ -159,6 +186,15 @@ class AppStrings {
     instructionsAndroid13Title: 'Android 13 ja 14+ (kaikki merkit):',
     instructionsAndroid13Body: 'Jos sovellus asennetaan APK-tiedostosta: Sovelluksen tiedot -> oikeasta yläkulmasta kolme pistettä (⋮) -> Salli rajoitetut asetukset, ennen kuin ilmoitusten käyttöoikeus kytketään päälle.',
     beforeUseButton: 'Ennen käyttöä',
+    serviceStatusActive: 'Taustavalvonta aktiivinen ja toiminnassa',
+    serviceStatusStopped: 'Taustavalvonta ei ole käynnissä',
+    serviceRestartButton: 'Käynnistä valvonta uudelleen',
+    serviceChecking: 'Tarkistetaan tilaa...',
+    batteryOptWarningTitle: 'Akun optimointi päällä (rajoitettu)',
+    batteryOptWarningSubtitle: 'Androidin virransäästö voi sammuttaa valvonnan lepotilassa. Salli rajoittamaton käyttö, jotta hälytys toimii aina luotettavasti.',
+    batteryOptButton: 'Salli taustatoiminta',
+    batteryOptGrantedTitle: 'Rajoittamaton taustatoiminta sallittu',
+    batteryOptGrantedSubtitle: 'Akun optimointi ohitettu. Järjestelmä ei keskeytä akkuvahdin taustatoimintaa.',
   );
 
   // Swedish
@@ -192,7 +228,7 @@ class AppStrings {
     instructionsTitle: 'Enhetstillverkarens specifika inställningar (Viktigt!):',
     instructionsIntro: 'Olika Android-tillverkare har egna batterioptimerare som kan stänga av bakgrundstjänster när telefonen är i viloläge under en längre tid. Kontrollera dessa beroende på din telefonmodell:',
     instructionsSamsungTitle: 'Samsung (One UI):',
-    instructionsSamsungBody: 'Inställningar -> Batteri -> Gränser för bakgrundsanvändning -> Appar som aldrig försätts i viloläge -> Lägg till Batterivakt (eller fsavenotifications).',
+    instructionsSamsungBody: 'Inställningar -> Batteri -> Gränser för bakgrundsanvändning -> Appar som aldrig försätts i viloläge -> Lägg till Batterivakt.',
     instructionsXiaomiTitle: 'Xiaomi / Redmi / POCO (MIUI / HyperOS):',
     instructionsXiaomiBody: 'Appinformation -> Autostart -> Slå PÅ.\nAppinformation -> Batterisparare -> Välj Inga begränsningar.',
     instructionsOnePlusTitle: 'OnePlus / Oppo / Realme (OxygenOS / ColorOS):',
@@ -200,6 +236,15 @@ class AppStrings {
     instructionsAndroid13Title: 'Android 13 och 14+ (alla märken):',
     instructionsAndroid13Body: 'Om appen installeras från en APK-fil: Appinformation -> tre punkter i övre högra hörnet (⋮) -> Tillåt begränsade inställningar, innan behörighet för aviseringar aktiveras.',
     beforeUseButton: 'Före användning',
+    serviceStatusActive: 'Bakgrundsövervakning aktiv och igång',
+    serviceStatusStopped: 'Bakgrundsövervakningen körs inte',
+    serviceRestartButton: 'Starta om övervakning',
+    serviceChecking: 'Kontrollerar status...',
+    batteryOptWarningTitle: 'Batterioptimering aktiv (begränsad)',
+    batteryOptWarningSubtitle: 'Androids energisparfunktion kan stoppa övervakningen under viloläge. Tillåt obegränsad bakgrundsaktivitet.',
+    batteryOptButton: 'Tillåt bakgrundsaktivitet',
+    batteryOptGrantedTitle: 'Obegränsad bakgrundsaktivitet tillåten',
+    batteryOptGrantedSubtitle: 'Batterioptimering ignorerad. Systemet stoppar inte batterivakten.',
   );
 
   // German
@@ -233,7 +278,7 @@ class AppStrings {
     instructionsTitle: 'Herstellerspezifische Einstellungen am Telefon (Wichtig!):',
     instructionsIntro: 'Verschiedene Android-Hersteller haben eigene Akku-Manager, die Hintergrunddienste beenden können, wenn das Telefon längere Zeit im Ruhezustand ist. Bitte prüfen Sie folgende Einstellungen je nach Modell:',
     instructionsSamsungTitle: 'Samsung (One UI):',
-    instructionsSamsungBody: 'Einstellungen -> Akku -> Grenzen der Hintergrundnutzung -> Apps, die nie in Standby versetzt werden -> Batteriewächter (oder fsavenotifications) hinzufügen.',
+    instructionsSamsungBody: 'Einstellungen -> Akku -> Grenzen der Hintergrundnutzung -> Apps, die nie in Standby versetzt werden -> Batteriewächter hinzufügen.',
     instructionsXiaomiTitle: 'Xiaomi / Redmi / POCO (MIUI / HyperOS):',
     instructionsXiaomiBody: 'App-Info -> Autostart -> Einschalten.\nApp-Info -> Energiesparmodus -> Keine Beschränkungen wählen.',
     instructionsOnePlusTitle: 'OnePlus / Oppo / Realme (OxygenOS / ColorOS):',
@@ -241,6 +286,15 @@ class AppStrings {
     instructionsAndroid13Title: 'Android 13 und 14+ (alle Marken):',
     instructionsAndroid13Body: 'Wenn die App über eine APK-Datei installiert wird: App-Info -> drei Punkte oben rechts (⋮) -> Eingeschränkte Einstellungen zulassen, bevor die Benachrichtigungsberechtigung aktiviert wird.',
     beforeUseButton: 'Vor der Nutzung',
+    serviceStatusActive: 'Hintergrundüberwachung aktiv und in Betrieb',
+    serviceStatusStopped: 'Hintergrundüberwachung läuft nicht',
+    serviceRestartButton: 'Überwachung neu starten',
+    serviceChecking: 'Status wird überprüft...',
+    batteryOptWarningTitle: 'Akku-Optimierung aktiv (eingeschränkt)',
+    batteryOptWarningSubtitle: 'Android-Energiesparmodi können die Überwachung im Ruhezustand beenden. Uneingeschränkte Nutzung erlauben.',
+    batteryOptButton: 'Hintergrundaktivität erlauben',
+    batteryOptGrantedTitle: 'Uneingeschränkte Hintergrundaktivität erlaubt',
+    batteryOptGrantedSubtitle: 'Akku-Optimierung ignoriert. Das System beendet den Batteriewächter nicht.',
   );
 
   /// Resolve strings based on locale code ('fi', 'sv', 'de', or default 'en')

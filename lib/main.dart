@@ -42,23 +42,37 @@ class BatteryMonitorScreen extends StatefulWidget {
   State<BatteryMonitorScreen> createState() => _BatteryMonitorScreenState();
 }
 
-class _BatteryMonitorScreenState extends State<BatteryMonitorScreen> {
+class _BatteryMonitorScreenState extends State<BatteryMonitorScreen>
+    with WidgetsBindingObserver {
   final BatteryMonitorService _service = BatteryMonitorService();
   final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _service.addListener(_onServiceUpdate);
-    _requestPermissions();
+    _initPermissionsAndService();
   }
 
-  Future<void> _requestPermissions() async {
+  Future<void> _initPermissionsAndService() async {
     await Permission.notification.request();
+    await _service.checkBatteryOptimizationStatus();
+    await _service.checkAndEnsureRunning(restartIfStopped: true);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      // Kun käyttäjä palaa sovellukseen, varmistetaan heti palvelun toiminta ja akkutila
+      _service.checkAndEnsureRunning(restartIfStopped: true);
+      _service.checkBatteryOptimizationStatus();
+    }
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _service.removeListener(_onServiceUpdate);
     _scrollController.dispose();
     super.dispose();
@@ -185,6 +199,16 @@ class _BatteryMonitorScreenState extends State<BatteryMonitorScreen> {
                     ),
                   ),
                   const SizedBox(height: 20),
+                ],
+
+                // Service Status Card
+                _buildServiceStatusCard(context, strings),
+                const SizedBox(height: 12),
+
+                // Battery Optimization Warning Card
+                if (!_service.isIgnoringBatteryOptimizations) ...[
+                  _buildBatteryOptimizationWarning(context, strings),
+                  const SizedBox(height: 12),
                 ],
 
                 // Battery Status Card
@@ -531,6 +555,154 @@ class _BatteryMonitorScreenState extends State<BatteryMonitorScreen> {
           Text(
             body,
             style: const TextStyle(fontSize: 13, height: 1.4, color: Colors.white),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildServiceStatusCard(BuildContext context, AppStrings strings) {
+    final isRunning = _service.isRunning;
+    final isChecking = _service.isCheckingService;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: isRunning
+            ? Colors.green.withValues(alpha: 0.12)
+            : Colors.red.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: isRunning
+              ? Colors.greenAccent.withValues(alpha: 0.3)
+              : Colors.redAccent.withValues(alpha: 0.5),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            isRunning ? Icons.check_circle : Icons.error_outline,
+            color: isRunning ? Colors.greenAccent : Colors.redAccent,
+            size: 22,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  isRunning ? strings.serviceStatusActive : strings.serviceStatusStopped,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: isRunning ? Colors.greenAccent : Colors.redAccent,
+                  ),
+                ),
+                if (isRunning && _service.isIgnoringBatteryOptimizations)
+                  Text(
+                    strings.batteryOptGrantedTitle,
+                    style: const TextStyle(fontSize: 11, color: Colors.white70),
+                  ),
+              ],
+            ),
+          ),
+          if (!isRunning)
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.redAccent,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              onPressed: () => _service.restartService(),
+              child: Text(
+                strings.serviceRestartButton,
+                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+              ),
+            )
+          else
+            IconButton(
+              icon: isChecking
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.greenAccent),
+                    )
+                  : const Icon(Icons.refresh, size: 18, color: Colors.greenAccent),
+              tooltip: strings.serviceChecking,
+              visualDensity: VisualDensity.compact,
+              onPressed: () => _service.checkAndEnsureRunning(restartIfStopped: true),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBatteryOptimizationWarning(BuildContext context, AppStrings strings) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.amber.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.amberAccent.withValues(alpha: 0.4)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.battery_alert, color: Colors.amberAccent, size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  strings.batteryOptWarningTitle,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.amberAccent,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            strings.batteryOptWarningSubtitle,
+            style: const TextStyle(fontSize: 12, color: Colors.white70, height: 1.3),
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.amberAccent,
+                side: const BorderSide(color: Colors.amberAccent),
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                visualDensity: VisualDensity.compact,
+              ),
+              icon: const Icon(Icons.flash_on, size: 16),
+              label: Text(
+                strings.batteryOptButton,
+                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+              ),
+              onPressed: () async {
+                final granted = await _service.requestIgnoreBatteryOptimization();
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        granted ? strings.batteryOptGrantedTitle : strings.batteryOptWarningTitle,
+                      ),
+                      duration: const Duration(seconds: 2),
+                    ),
+                  );
+                }
+              },
+            ),
           ),
         ],
       ),

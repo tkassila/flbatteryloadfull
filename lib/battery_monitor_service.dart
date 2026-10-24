@@ -3,8 +3,10 @@ import 'dart:ui';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:battery_plus/battery_plus.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'app_strings.dart';
 
@@ -41,6 +43,8 @@ void onStart(ServiceInstance service) async {
   bool isPlayingAlarm = false;
   int? lastAlarm80Level;
   int? lastNotified22Level;
+  int lastLevel = 100;
+  BatteryState lastState = BatteryState.discharging;
 
   const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
   const initSettings = InitializationSettings(android: androidSettings);
@@ -51,7 +55,7 @@ void onStart(ServiceInstance service) async {
         isPlayingAlarm = false;
         await audioPlayer.stop();
         await notifications.cancel(80);
-        service.invoke('update', {'isPlayingAlarm': false});
+        service.invoke('update', {'isPlayingAlarm': false, 'isServiceRunning': true});
       }
     },
     onDidReceiveBackgroundNotificationResponse: notificationTapBackground,
@@ -62,7 +66,7 @@ void onStart(ServiceInstance service) async {
     isPlayingAlarm = false;
     await audioPlayer.stop();
     await notifications.cancel(80);
-    service.invoke('update', {'isPlayingAlarm': false});
+    service.invoke('update', {'isPlayingAlarm': false, 'isServiceRunning': true});
   });
 
   service.on('triggerTest22').listen((event) async {
@@ -76,6 +80,17 @@ void onStart(ServiceInstance service) async {
     }
   });
 
+  // Listen to ping from UI to confirm service is alive and return current state
+  service.on('ping').listen((event) {
+    service.invoke('update', {
+      'level': lastLevel,
+      'state': lastState.index,
+      'isPlayingAlarm': isPlayingAlarm,
+      'isServiceRunning': true,
+      'timestamp': DateTime.now().millisecondsSinceEpoch,
+    });
+  });
+
   // Periodic check function (executes once every 60s + upon battery state changes)
   Future<void> checkBattery() async {
     try {
@@ -83,6 +98,9 @@ void onStart(ServiceInstance service) async {
       final level = await battery.batteryLevel;
       final state = await battery.batteryState;
       final isCharging = state == BatteryState.charging || state == BatteryState.full;
+
+      lastLevel = level;
+      lastState = state;
 
       final prefs = await SharedPreferences.getInstance();
       final enable22 = prefs.getBool('enable22Notification') ?? true;
@@ -104,6 +122,8 @@ void onStart(ServiceInstance service) async {
         'level': level,
         'state': state.index,
         'isPlayingAlarm': isPlayingAlarm,
+        'isServiceRunning': true,
+        'timestamp': DateTime.now().millisecondsSinceEpoch,
       });
 
       if (!isCharging) {
@@ -114,7 +134,7 @@ void onStart(ServiceInstance service) async {
           isPlayingAlarm = false;
           await audioPlayer.stop();
           await notifications.cancel(80);
-          service.invoke('update', {'isPlayingAlarm': false});
+          service.invoke('update', {'isPlayingAlarm': false, 'isServiceRunning': true});
         }
 
         // 22 % lyhyt ilmoitus
@@ -140,7 +160,7 @@ void onStart(ServiceInstance service) async {
             await audioPlayer.setVolume(volume);
             await audioPlayer.play(AssetSource('sounds/alarm_80.mp3'));
             await _showAlarm80Notification(notifications);
-            service.invoke('update', {'isPlayingAlarm': true});
+            service.invoke('update', {'isPlayingAlarm': true, 'isServiceRunning': true});
           }
         } else {
           lastAlarm80Level = null;
@@ -218,6 +238,9 @@ class BatteryMonitorService {
   factory BatteryMonitorService() => _instance;
   BatteryMonitorService._internal();
 
+  static const MethodChannel _platformChannel =
+      MethodChannel('com.metait.flbatteryloadfull/service_control');
+
   final FlutterBackgroundService _backgroundService = FlutterBackgroundService();
   final FlutterLocalNotificationsPlugin _notificationsPlugin = FlutterLocalNotificationsPlugin();
   final Battery _battery = Battery();
@@ -229,13 +252,21 @@ class BatteryMonitorService {
   BatteryState _batteryState = BatteryState.discharging;
   bool _isPlayingAlarm = false;
 
+  bool _isRunning = false;
+  bool _isCheckingService = false;
+  DateTime? _lastHeartbeat;
+  bool _isIgnoringBatteryOptimizations = false;
+
   final List<void Function()> _listeners = [];
 
   final AudioPlayer _testAudioPlayer = AudioPlayer();
   Timer? _testStopTimer;
   bool _isPlayingTestSound = false;
 
-  bool get isRunning => true;
+  bool get isRunning => _isRunning;
+  bool get isCheckingService => _isCheckingService;
+  DateTime? get lastHeartbeat => _lastHeartbeat;
+  bool get isIgnoringBatteryOptimizations => _isIgnoringBatteryOptimizations;
   bool get isPlayingAlarm => _isPlayingAlarm;
   bool get isPlayingTestSound => _isPlayingTestSound;
   int get batteryLevel => _batteryLevel;
@@ -294,6 +325,7 @@ class BatteryMonitorService {
       androidConfiguration: AndroidConfiguration(
         onStart: onStart,
         autoStart: true,
+        autoStartOnBoot: true,
         isForegroundMode: true,
         notificationChannelId: notificationChannelId,
         initialNotificationTitle: strings.foregroundNotificationTitle,
@@ -305,6 +337,8 @@ class BatteryMonitorService {
 
     _backgroundService.on('update').listen((event) {
       if (event != null) {
+        _isRunning = true;
+        _lastHeartbeat = DateTime.now();
         if (event.containsKey('level')) {
           _batteryLevel = event['level'] as int;
         }
@@ -321,7 +355,93 @@ class BatteryMonitorService {
       }
     });
 
+    // Check battery optimization status
+    await checkBatteryOptimizationStatus();
+
+    // Verify service status and ensure it is running
+    await checkAndEnsureRunning(restartIfStopped: true);
+
     _notifyListeners();
+  }
+
+  /// Checks if background service is running. If not and [restartIfStopped] is true,
+  /// restarts/wakes up the service immediately.
+  Future<bool> checkAndEnsureRunning({bool restartIfStopped = true}) async {
+    _isCheckingService = true;
+    _notifyListeners();
+
+    bool running = false;
+    try {
+      running = await _backgroundService.isRunning();
+
+      // If flutter_background_service says false, double-check native side
+      if (!running) {
+        try {
+          final nativeRunning = await _platformChannel.invokeMethod<bool>('isServiceRunning');
+          if (nativeRunning == true) {
+            running = true;
+          }
+        } catch (_) {}
+      }
+
+      if (!running && restartIfStopped) {
+        debugPrint('BatteryMonitorService: Palvelu ei ollut käynnissä, käynnistetään...');
+        final started = await _backgroundService.startService();
+        if (!started) {
+          try {
+            await _platformChannel.invokeMethod('wakeUpService');
+          } catch (_) {}
+        }
+        // Give the service a moment to initialize
+        await Future.delayed(const Duration(milliseconds: 600));
+        running = await _backgroundService.isRunning();
+      }
+
+      if (running) {
+        _backgroundService.invoke('ping');
+      }
+    } catch (e) {
+      debugPrint('BatteryMonitorService: Virhe taustapalvelun tarkistuksessa: $e');
+    } finally {
+      _isRunning = running;
+      _isCheckingService = false;
+      _notifyListeners();
+    }
+
+    return running;
+  }
+
+  /// Query native Android PowerManager to check whether battery optimizations are disabled
+  Future<bool> checkBatteryOptimizationStatus() async {
+    try {
+      final isIgnoring = await _platformChannel.invokeMethod<bool>('isIgnoringBatteryOptimizations');
+      _isIgnoringBatteryOptimizations = isIgnoring ?? false;
+    } catch (_) {
+      try {
+        _isIgnoringBatteryOptimizations = await Permission.ignoreBatteryOptimizations.isGranted;
+      } catch (_) {}
+    }
+    _notifyListeners();
+    return _isIgnoringBatteryOptimizations;
+  }
+
+  /// Request exemption from Android battery optimizations (opens system dialog directly)
+  Future<bool> requestIgnoreBatteryOptimization() async {
+    try {
+      await _platformChannel.invokeMethod('requestIgnoreBatteryOptimizations');
+      await Future.delayed(const Duration(milliseconds: 800));
+      return await checkBatteryOptimizationStatus();
+    } catch (_) {
+      final status = await Permission.ignoreBatteryOptimizations.request();
+      _isIgnoringBatteryOptimizations = status.isGranted;
+      _notifyListeners();
+      return status.isGranted;
+    }
+  }
+
+  /// Manual restart helper
+  Future<bool> restartService() async {
+    return await checkAndEnsureRunning(restartIfStopped: true);
   }
 
   Future<void> setEnable22Notification(bool value) async {
